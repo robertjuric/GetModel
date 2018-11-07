@@ -7,12 +7,11 @@ import re
 
 #Open CSV Files
 print ("Opening files...")
-with open ('Inventory.csv', 'r') as inf, open('UpdatedInventory.csv', 'w') as outf:
+with open ('shortinventory.csv', 'r') as inf, open('UpdatedInventory.csv', 'w') as outf:
 	reader = csv.DictReader(inf)
 
 	#Add new column to end of updated CSV
 	new_fieldnames = reader.fieldnames + ['Model'] + ['LiveVersion']
-
 	writer = csv.DictWriter(outf, new_fieldnames)
 	writer.writeheader()
 	
@@ -26,20 +25,25 @@ with open ('Inventory.csv', 'r') as inf, open('UpdatedInventory.csv', 'w') as ou
 			net_connect = ConnectHandler(device_type='cisco_ios', ip=this_ip, username='admin', password='pw')
 		except SSHException:
 			print('SSH error')
+			model_info = "SSH error"
 			continue
-		#Works but returns empty on IOS-XE
-		#model_output = net_connect.send_command("show version | i Model number")
-		#Works better across multiple platforms, but is still missing:
-		#show version | i Model Number appears to work on IOS-XE
-		#"show version | i bytes of" to get similar out, some devices say 'bytes of physical memory'
 		model_output = net_connect.send_command("show version | i bytes of")
 		model_detail = re.split(' ', model_output)
 		if model_output:
-			#print(model_detail[1])
 			model_info = model_detail[1]
-			#strip leading space when splitting "show version | i Model number"
+			print(model_info)
+			#If needed, strip leading space
 			#model_info = model_detail[1].lstrip(' ')
+			if len(model_info) == 0:
+				#print("blank")
+				#test Nexus 9k:
+				nexus_output = net_connect.send_command("show hardware | i Model")
+				if nexus_output:
+					nexus_detail = re.split(' ', nexus_output)
+					model_info = nexus_detail[5].rstrip('\n')
+					print(model_info)
 		else:
+			print("oops")
 			model_info = "empty"
 		"""
 		version_output = net_connect.send_command("show version | i Software")	
